@@ -1,0 +1,3 @@
+atom:H	type:pseudodensity_dense	ngaussian:2	mse:5.477090923257631e-05	integration:0.9982665678455322
+atom:Li	type:pseudodensity_dense	ngaussian:2	mse:0.0005151849542861398	integration:2.8908045620623355
+atom:Be	type:pseudodensity_dense	ngaussian:2	mse:7.528637563796123e-05	integration:3.9835667637054177

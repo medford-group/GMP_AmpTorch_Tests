@@ -1,0 +1,5 @@
+atom:B	type:pseudodensity_dense	ngaussian:3	mse:10858766225.811224	integration:2.989115340053771
+atom:C	type:pseudodensity_dense	ngaussian:4	mse:27796811242.13727	integration:4.00150873899622
+atom:N	type:pseudodensity_dense	ngaussian:4	mse:220444835388.34174	integration:5.007525712934974
+atom:O	type:pseudodensity_dense	ngaussian:4	mse:99471461943210.73	integration:6.011965082354446
+atom:F	type:pseudodensity_dense	ngaussian:4	mse:2263121516029089.0	integration:7.014744897977584
