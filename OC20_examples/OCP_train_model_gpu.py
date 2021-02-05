@@ -307,13 +307,14 @@ print("end training")
 train_mae = predict_data(trainer, train_images[:num_training], image_type = "train")
 test_mae = predict_data(trainer, train_images[num_training:num_training+25000], image_type = "test")
 
-message = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+message = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
                     sigmas_index, 
                     MCSHs_index, 
                     num_nodes,
                     num_layers,
                     batch_size,
                     cutoff_distance,
+                    num_training
                     train_mae,
                     test_mae
                     )

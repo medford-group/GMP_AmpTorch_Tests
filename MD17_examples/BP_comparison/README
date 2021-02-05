@@ -1,0 +1,31 @@
+*** the default unit is kcal/mol ***
+
+1.
+Please go to http://quantum-machine.org/gdml/
+to download the extended_xyz data file of aspirin and unzip to this directory
+
+2.
+run
+python prepare_data.py
+to get randomly selected images for training and test (50k training, 10k test)
+
+The data should be created in the ./data/ directory
+
+3.
+run the test for GMP+SNN using the following command:
+python GMP_SNN_test.py [trial_number] [num_gaussian] [max_MCSH_order]
+for example
+python GMP_SNN_test.py 1 4 2
+
+it will create a directory and train the model there.
+you can change the model size/ feature setup/ training procedure inside the script
+
+4
+run the test for Behler-Parrinello+HDNN using the following command:
+python GMP_SNN_test.py [trial_number] [desciptor_setup_index]
+for example
+python GMP_SNN_test.py 1 2
+
+it will create a directory and train the model there.
+There are 12 pre-built set of descriptors
+you can change the model size/ feature setup/ training procedure inside the script

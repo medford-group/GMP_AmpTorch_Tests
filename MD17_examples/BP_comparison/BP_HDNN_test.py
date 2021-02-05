@@ -267,7 +267,7 @@ systems = ["aspirin"]
 cwd = os.getcwd()
 
 
-folder_name = "BP_set_{}_trial_{}".format(descriptor_set, trial_num)
+folder_name = "BP_HDNN_set_{}_trial_{}".format(descriptor_set, trial_num)
 if not os.path.exists(folder_name):
     os.makedirs(folder_name)
 os.chdir(folder_name)

@@ -171,7 +171,7 @@ systems = ["aspirin"]
 cwd = os.getcwd()
 
 
-folder_name = "ngaussian_{}_MCSH_{}_trial_{}_singleNN".format(num_gaussian, max_MCSH_order, trial_num)
+folder_name = "GMP_SNN_ngaussian_{}_MCSH_{}_trial_{}".format(num_gaussian, max_MCSH_order, trial_num)
 if not os.path.exists(folder_name):
     os.makedirs(folder_name)
 os.chdir(folder_name)

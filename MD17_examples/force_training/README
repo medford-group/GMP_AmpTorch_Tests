@@ -1,0 +1,13 @@
+*** the default unit is kcal/mol ***
+
+1.
+Please go to http://quantum-machine.org/gdml/
+to download the extended_xyz data file of aspirin and unzip to this directory
+
+
+2.
+run
+python prepare_data_force.py
+to get randomly selected images for training and test (1k training, 1k test)
+
+The data should be created in the ./data/ directory

@@ -219,5 +219,5 @@ message = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
                     train_mae,
                     test_mae
                     )
-log("../pseudo_train_result.dat",message)
+log("../train_result.dat",message)
 
