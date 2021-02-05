@@ -1,3 +1,5 @@
+*** the unit is kcal/mol by default during training ***
+
 1.
 To train the models with the QM9 dataset, first download the raw data at: 
 https://figshare.com/collections/Quantum_chemistry_structures_and_properties_of_134_kilo_molecules/978904
@@ -34,10 +36,17 @@ like
 python train_model_gpu.py 120000_linear_fit test 19 4 150 7 32 15.0
 Note that "test" is here as a placeholder, as no checkpoint is loaded
 
+
 to load model and continue training from checkpoint, uncomment line 204 of the scipt and run something like
 python train_model_gpu.py 120000_linear_fit ./checkpoints/2021-02-03-14-44-03-test 19 4 150 7 32 15.0
 
 You can also change the list of sigmas in the script
 
 
+5.
+To test for transfer learning, perpare the dataset using:
+python prepare_dataset_exclude_element_linear_fit.py
 
+Please copy the per-element bias got from previous trial, and change line 85-89 of the "prepare_dataset_exclude_element_linear_fit.py" file accordingly
+
+a folder with the name "trial_exclude_atom_F_linear_fit" should be created containing the data.
