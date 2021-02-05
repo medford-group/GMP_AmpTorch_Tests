@@ -113,11 +113,11 @@ def train_model(train_list, test_list, num_gaussian, max_MCSH_order, trial_num, 
             "gpus":0,
             #"force_coefficient": 0.04,
             "force_coefficient": 0.0,
-            "lr": 1e-2,
-            "batch_size": 32,
-            "epochs": 6000,
+            "lr": 1e-3,
+            "batch_size": 256,
+            "epochs": 5000,
             "loss": "mae",
-            "scheduler": {"policy": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}},
+            #"scheduler": {"policy": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}},
         },
         "dataset": {
             "raw_data": train_list,
@@ -159,9 +159,10 @@ def load_data(systems, trial_num):
     return train_data, test_data
 
 torch.set_num_threads(1)
+trial_num = int(sys.argv[1])
 num_gaussian = int(sys.argv[2])
 max_MCSH_order = int(sys.argv[3])
-trial_num = int(sys.argv[1])
+
 
 log_filename = "info.log"
 

@@ -119,8 +119,6 @@ def load_training_data(dataset, test_filename):
 torch.set_num_threads(1)
 trail_num = sys.argv[1]
 dataset = sys.argv[2]
-# checkpoint_name = sys.argv[2]
-#train_filename = "OCP_train_{}.p".format(trail_num)
 test_filename = "OCP_test_{}.p".format(dataset)
 folder_name = "trial_{}".format(trail_num)
 
