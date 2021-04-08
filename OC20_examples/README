@@ -1,52 +1,75 @@
 *** the default unit is eV ***
 
+Note that the per-element biases, and feature scalers are provided for the feature sets in this example
+to generate models with other setups, please prepare the feature scaler with the example provided on 
+AmpTorch website before calculating lmdb files 
+
 1. 
 please go to https://opencatalystproject.org/
 to view and download the dataset
-the ones used in this study is the S2EF 200k training dataset
+the ones used in this study is the S2EF 20M training dataset
 and val_id validation dataset for test
 
 
 2.
 unzip the data to the directories:
-training: ./s2ef_train_200K/s2ef_train_200K/
+training: ./s2ef_train_20M/s2ef_train_20M/
 test:     ./s2ef_val_id/s2ef_val_id/
 
-Note that please untar each data file to *.extxyz
+Note that please untar each data file to *.extxyz 
+each file is a sub-dataset that contains the energy and coordinates of 5000 images
 
 
 3.
-calculate per-element bias and prepare training data pickle using:
-python OCP_read_train_dataset_linear_fit.py [trial_name]
-for example
-python OCP_read_train_dataset_linear_fit.py full_data
+Apply per-element bias and create list of images based on each sub-dataset
+result will be saved at trial_data_full_20M/images
 
-then test data
-python OCP_read_train_dataset_linear_fit.py [trial_name] [val_dataset_name]
-for example
-python OCP_read_train_dataset_linear_fit.py full_data s2ef_val_id
+simply run 
+python OCP_read_train_dataset_linear_fit_20M.py
 
-Note that training data has to be prepared first for each trial
+Note that this will apply to all the files by default, and could take a while
+if you only want to train with a subset, change line 99 of the file
 
 
 4.
+Prepare lmdb files
+once step 3 is finished, prepare lmdb files for the GMP setup of choice using
+
+python generate_lmdb.py [num_radial_gaussian] [max_MCSH_order] [sub_dataset_index]
+
+e.g.
+
+python generate_lmdb.py 13 3 0
+
+Note that this could take a while, so it's adviced to prepare the lmdb files in parallel if you can
+baisacally parallelize w.r.t. sub_dataset_index
+
+Also, the available combinations of num_radial_gaussian and max_MCSH_order are:
+13	3
+19	4
+37	5 
+
+
+similar for the validation set:
+python generate_lmdb_val.py [num_radial_gaussian] [max_MCSH_order] [sub_dataset_index]
+
+
+4.
+Train Model!
+
 train model with the following command:
-python OCP_train_model_gpu.py [trial_name] [checkpoint_name] [num_gaussians] [order_MCSH] [num_nodes] [num_layers] [minibatch_size] [cutoff_distance] [num_training_points]
+python train_model_gpu_lmdb.py [trial_name] [checkpoint_name] [num_gaussians] [order_MCSH] [num_nodes] [num_layers] [minibatch_size] [num_training_points] [learning_rate] [num_epochs]
+
 for example
-python OCP_train_model_gpu.py full_data test 19 4 150 7 32 15.0 25000
+
+python OCP_train_model_gpu.py data_full_20M test 19 4 150 7 32 25000 5e-3 2000
+
 to train a GMP(4,19)+SNN(150,7) model, with cutoff distance of 15.0 angstrom, 25000 training images and 32 image minibatch during training. 
-Note that "test" is here as a placeholder, as no checkpoint is loaded
-
-Due to the size of the systems, it's recommended to turn save_fps on if possible, so that features calculated are saved to disk, and can be loaded later
-
-to load model and continue training from checkpoint, uncomment line 204 of the scipt and run something like
-python train_model_gpu.py full_data ./checkpoints/2021-02-03-14-44-03-test 19 4 150 7 32 15.0
-
-You can also change the list of sigmas in the script
+learning rate is 5e-3 and train for 2000 epochs
 
 
-5.
-from line 308 of python OCP_train_model_gpu.py, the script runs a quick test with 25000 images in the training set that didn't use for training
-please comment out or change as needed
+Note that "test" is here as a placeholder, as no checkpoint is loaded, provide full path here if you want to load checkpoint
+
+python OCP_train_model_gpu.py data_full_20M ./checkpoints/2021-02-03-14-44-03-test 19 4 150 7 32 25000 5e-3 2000
 
 

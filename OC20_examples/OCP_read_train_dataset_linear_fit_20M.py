@@ -36,7 +36,7 @@ def load_linear_fit_result(linear_fit_result_filename):
 
 
 
-def linear_correct(training_list, correction_dict, image_index, dataset):
+def linear_correct(training_list, correction_dict, image_index):
     # atom_dict = {atom:i for i, atom in enumerate(atom_list)}
     # atom_dict_rev = {i:atom for i, atom in enumerate(atom_list)}
 
@@ -84,7 +84,7 @@ def linear_correct(training_list, correction_dict, image_index, dataset):
     result2 += "training msepa: {}\n".format(np.mean(np.square(corrected_energy_per_atom_list)))
 
 
-    linear_model_info_filename = "{}_images/linear_model_info_{}.dat".format(dataset, image_index)
+    linear_model_info_filename = "images/linear_model_info_{}.dat".format(image_index)
     log(linear_model_info_filename,result2)
     
     return training_list
@@ -96,7 +96,7 @@ def load_training_data(dataset, correction_dict):
 
     #atom_list = []
     #training_data_list = []
-    for i in range(200):
+    for i in range(4000):
         print("================= start image {} =====================".format(i))
         filename = "../{}/{}/{}.extxyz".format(dataset,dataset,i)
         training_data_list = read(filename, index=':')
@@ -115,19 +115,19 @@ def load_training_data(dataset, correction_dict):
         print("average energy before: ")
         print(np.mean(energy_list_pre))
 
-        training_images = linear_correct(training_data_list, correction_dict, i, dataset)
+        training_images = linear_correct(training_data_list, correction_dict, i)
         energy_list_after = [image.get_calculator().get_potential_energy() for image in training_images]
         print("average energy after: ")
         print(np.mean(energy_list_after))
 
-        training_filename = "{}_images/{}.p".format(dataset,i)
+        training_filename = "images/images_s2ef_train_20M_{}.p".format(i)
         pickle.dump( training_images, open( training_filename, "wb" ) )
 
     return 
 
 torch.set_num_threads(1)
 trail_num = "data_full_20M"
-dataset = sys.argv[1]
+dataset = "s2ef_train_20M"
 folder_name = "trial_{}".format(trail_num)
 os.chdir(folder_name)
 correction_dict = load_linear_fit_result("linear_model_result.dat")
