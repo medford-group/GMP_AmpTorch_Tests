@@ -202,18 +202,18 @@ def train_model(train_list, test_list, descriptor_set, trial_num, log_filename):
                   "get_forces": False, 
                   "num_layers": 3, 
                   "num_nodes": 50, 
-                  #"elementwise":False, 
+                  "elementwise":True, 
                   "batchnorm": True},
 
         "optim": {
             "gpus":0,
             #"force_coefficient": 0.04,
             "force_coefficient": 0.0,
-            "lr": 1e-3,
-            "batch_size": 256,
-            "epochs": 5000,
+            "lr": 5e-3,
+            "batch_size": 128,
+            "epochs": 4000,
             "loss": "mae",
-            #"scheduler": {"policy": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}},
+            "scheduler": {"policy": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}},
         },
         "dataset": {
             "raw_data": train_list,

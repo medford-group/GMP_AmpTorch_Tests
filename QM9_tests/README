@@ -31,15 +31,11 @@ a directory will be created under the current directory containing the data and 
 
 4.
 Train model with the following command:
-python train_model_gpu.py [dataset_name] [checkpoint_name] [num_gaussians] [order_MCSH] [num_nodes] [num_layers] [minibatch_size] [cutoff_distance]
+python train_model_gpu.py [dataset_name] [num_radial_gaussians] [max_order_MCSH] [NN_index]
+where NN_index specifies the structure of the NN (please see line 136-143 of the code)
 for example
-python train_model_gpu.py 120000_linear_fit test 13 2 60 5 32 15.0
-to train a GMP(2,13)+SNN(60,7) model, with cutoff distance of 15.0 angstrom, and 32 image minibatch during training. 
-Note that "test" is here as a placeholder, as no checkpoint is loaded
-
-
-to load model and continue training from checkpoint, uncomment line 204 of the scipt and run something like
-python train_model_gpu.py 120000_linear_fit ./checkpoints/2021-02-03-14-44-03-test 19 4 150 7 32 15.0
+python train_model_gpu.py 120000_linear_fit 30 2 2
+to train a GMP(30,2)+SNN(64,64,64) model
 
 You can also change the list of sigmas in the script
 
@@ -51,3 +47,6 @@ python prepare_dataset_exclude_element_linear_fit.py
 Please copy the per-element bias got from previous trial, and change line 85-89 of the "prepare_dataset_exclude_element_linear_fit.py" file accordingly
 
 a folder with the name "trial_exclude_atom_F_linear_fit" should be created containing the data.
+
+The rest is the same as before:
+e.g. python train_model_gpu.py exclude_atom_F_linear_fit, 30 2 2

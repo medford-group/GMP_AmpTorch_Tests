@@ -17,7 +17,7 @@ training: ./s2ef_train_20M/s2ef_train_20M/
 test:     ./s2ef_val_id/s2ef_val_id/
 
 Note that please untar each data file to *.extxyz 
-each file is a sub-dataset that contains the energy and coordinates of 5000 images
+each file is a sub-dataset that contains the energy and coordinates of 50000 images
 
 
 3.
@@ -25,29 +25,30 @@ Apply per-element bias and create list of images based on each sub-dataset
 result will be saved at trial_data_full_20M/images
 
 simply run 
+python OCP_read_train_dataset_linear_fit_20M_prepare.py
+for preparing the per-element bias, then
 python OCP_read_train_dataset_linear_fit_20M.py
 
 Note that this will apply to all the files by default, and could take a while
-if you only want to train with a subset, change line 99 of the file
+if you only want to train with a subset, change line 110 of the file
 
 
 4.
 Prepare lmdb files
-once step 3 is finished, prepare lmdb files for the GMP setup of choice using
+once step 3 is finished, first prepare the feature/target normalizers of a certain descriptor set by
+
+python generate_lmdb.py [num_radial_gaussian] [max_MCSH_order]
+
+then prepare lmdb files for the GMP setup of choice using
 
 python generate_lmdb.py [num_radial_gaussian] [max_MCSH_order] [sub_dataset_index]
 
 e.g.
-
-python generate_lmdb.py 13 3 0
+python generate_lmdb_init_scaler.py 30 2
+python generate_lmdb.py 30 2 0
 
 Note that this could take a while, so it's adviced to prepare the lmdb files in parallel if you can
-baisacally parallelize w.r.t. sub_dataset_index
-
-Also, the available combinations of num_radial_gaussian and max_MCSH_order are:
-13	3
-19	4
-37	5 
+ parallelize w.r.t. sub_dataset_index
 
 
 similar for the validation set:
@@ -58,18 +59,32 @@ python generate_lmdb_val.py [num_radial_gaussian] [max_MCSH_order] [sub_dataset_
 Train Model!
 
 train model with the following command:
-python train_model_gpu_lmdb.py [trial_name] [checkpoint_name] [num_gaussians] [order_MCSH] [num_nodes] [num_layers] [minibatch_size] [num_training_points] [learning_rate] [num_epochs]
+python train_model_gpu_lmdb.py [trial_name] [checkpoint_name] [num_radial_gaussians] [max_MCSH_order] [NN_index] [num_training_data] [minibatch_size] [learning_rate] [num_epochs]
+
+trail_num = sys.argv[1]
+checkpoint_name = sys.argv[2]
+​
+nsigmas = int(sys.argv[3])
+MCSHs_index = int(sys.argv[4])
+NN_index = int(sys.argv[5])
+num_data = int(sys.argv[6])
+batch_size = int(sys.argv[7])
+​
+num_max_dataset = int(num_data / 50000)
+lr = float(sys.argv[8])
+epochs = int(sys.argv[9])
+n_gpu = torch.cuda.device_count()
 
 for example
 
-python OCP_train_model_gpu.py data_full_20M test 19 4 150 7 32 25000 5e-3 2000
+python OCP_train_model_gpu.py data_full_20M test 30 2 3 25000 64 5e-3 2000
 
-to train a GMP(4,19)+SNN(150,7) model, with cutoff distance of 15.0 angstrom, 25000 training images and 32 image minibatch during training. 
+to train a GMP(30,2)+SNN(128,64,64) model, with cutoff distance of 15.0 angstrom, 25000 training images and 32 image minibatch during training. 
 learning rate is 5e-3 and train for 2000 epochs
 
 
 Note that "test" is here as a placeholder, as no checkpoint is loaded, provide full path here if you want to load checkpoint
 
-python OCP_train_model_gpu.py data_full_20M ./checkpoints/2021-02-03-14-44-03-test 19 4 150 7 32 25000 5e-3 2000
+python OCP_train_model_gpu.py data_full_20M ./checkpoints/2021-02-03-14-44-03-test 30 2 3 25000 64 5e-3 2000
 
 

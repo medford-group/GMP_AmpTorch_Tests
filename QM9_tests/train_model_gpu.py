@@ -13,26 +13,27 @@ import sys
 import torch
 import os
 import csv
-
+import time
+​
 def log(log_filename, message):
     f = open(log_filename, "a")
     f.write(message)
     f.close()
     return
-
-
-
+​
+​
+​
 def load_training_data(training_filename, test_filename):
-
-
+​
+​
     training_list = pickle.load( open( training_filename, "rb" ) )
     test_list = pickle.load( open( test_filename, "rb" ) )
-
+​
     return training_list, test_list
-
-
+​
+​
 def load_linear_fit_result(linear_fit_result_filename):
-
+​
     correction_dict = {}
     with open(linear_fit_result_filename) as fp: 
         Lines = fp.readlines() 
@@ -40,24 +41,26 @@ def load_linear_fit_result(linear_fit_result_filename):
             temp = line.split()
             print(line.split())
             correction_dict[temp[0]]=float(temp[1])
-#     print(correction_dict)        
     return correction_dict
-
-def predict_data(trainer, test_images, linear_fit_result_filename = "../linear_model_result.dat", image_type = "test"):
+​
+def predict_data(trainer, test_images, folder_name, linear_fit_result_filename = "../linear_model_result.dat", image_type = "test"):
+    cwd = os.getcwd()
+    os.chdir(folder_name)
     linear_fit_result = load_linear_fit_result(linear_fit_result_filename)
+    os.chdir(cwd)
     
-    predictions = trainer.predict(test_images)
+    predictions = trainer.predict(test_images, disable_tqdm = False)
     true_energies = np.array([image.get_potential_energy() for image in test_images])
     pred_energies = np.array(predictions["energy"])
     print(true_energies.shape)
     print(pred_energies.shape)
-
+​
     pickle.dump( true_energies, open( "{}_true_energies.p".format(image_type), "wb" ) )
     pickle.dump( pred_energies, open( "{}_pred_energies.p".format(image_type), "wb" ) )
-
+​
     mae_result = np.mean(np.abs(true_energies - pred_energies))
     print("Energy MAE:", mae_result)
-
+    os.chdir(folder_name)
     list_of_error_per_atom = []
     with open('{}_prediction_result.csv'.format(image_type), 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -74,150 +77,134 @@ def predict_data(trainer, test_images, linear_fit_result_filename = "../linear_m
             list_of_error_per_atom.append(per_atom_error)
             writer.writerow([i, num_atoms,true_energies[i], pred_energies[i], total_energy_true, total_energy_pred,
                              error, per_atom_error, abs(error), abs(per_atom_error)])
-
+    os.chdir(cwd)
     return mae_result
-
-
-#torch.set_num_threads(1)
-trail_num = sys.argv[1]
-checkpoint_name = sys.argv[2]
-sigmas_index = int(sys.argv[3])
-MCSHs_index = int(sys.argv[4])
-num_nodes = int(sys.argv[5])
-num_layers = int(sys.argv[6])
-batch_size = int(sys.argv[7])
-cutoff_distance = float(sys.argv[8])
-
-train_filename = "../QM9_train_{}.p".format(trail_num)
-test_filename = "../QM9_test_{}.p".format(trail_num)
-folder_name = "./trial_{}/test_sigma{}_MCSH{}_nodes{}_layers{}_batch{}_cutoff{}".format(trail_num, sigmas_index, MCSHs_index, num_nodes,num_layers,batch_size,cutoff_distance)
+​
+​
+​
+dataset_name = sys.argv[1]
+nsigmas = int(sys.argv[2])
+MCSHs_index = int(sys.argv[3])
+NN_index = int(sys.argv[4])
+​
+​
+num_gpu = torch.cuda.device_count()
+print("****\n Found {} GPUs \n****\n\n".format(num_gpu))
+​
+train_filename = "../train.p"
+test_filename = "../test.p"
+cwd = os.getcwd()
+folder_name = "./trial_{}/test_GELU_ordernorm_sigma{}linwide_MCSH{}_NN{}_sqrt".format(dataset_name, nsigmas, MCSHs_index,NN_index)
 if not os.path.exists(folder_name):
     os.makedirs(folder_name)
 os.chdir(folder_name)
 train_images, test_images = load_training_data(train_filename, test_filename)
 
-sigmas_dict = {
-    37: [0.02,0.05,0.08,0.12,0.16,0.2,0.24,0.28,0.32,0.36,0.4,0.45,0.5,0.56,0.62,0.69,0.76,0.84,0.92,1.01,1.1,1.2,1.3,1.4,1.52,1.66,1.82,2.0,2.42,2.66,2.92,3.2,3.5,3.9,4.4,5.0],
-    19: [0.02,0.08,0.16,0.24,0.32,0.4,0.5,0.62,0.76,0.92,1.1,1.3,1.52,1.82,2.2,2.66,3.2,3.9,5.0],
-    13: [0.02,0.12,0.24,0.36,0.5,0.69,0.92,1.2,1.52,2.0,2.66,3.5,5.0],
-    10: [0.02,0.16,0.32,0.5,0.76,1.1,1.52,2.2,3.2,5.0],
-    8: [0.02,0.2,0.4,0.69,1.1,1.66,2.66,4.4],
-
-}
-
-sigmas = sigmas_dict[sigmas_index]
-
+sigmas = np.linspace(0.0,2.0,nsigmas+1,endpoint=True)[1:].tolist()
+print(sigmas)
 MCSHs_dict = {
-    1: {   
-                "0": {"groups": [1], "sigmas": sigmas},
-                "1": {"groups": [1], "sigmas": sigmas},
-          },
-    2: {   
-                "0": {"groups": [1], "sigmas": sigmas},
-                "1": {"groups": [1], "sigmas": sigmas},
-                "2": {"groups": [1,2], "sigmas": sigmas},
-          },
-    3: {   
-                "0": {"groups": [1], "sigmas": sigmas},
-                "1": {"groups": [1], "sigmas": sigmas},
-                "2": {"groups": [1,2], "sigmas": sigmas},
-                "3": {"groups": [1,2,3], "sigmas": sigmas},
-          },
-    4: {   
-                "0": {"groups": [1], "sigmas": sigmas},
-                "1": {"groups": [1], "sigmas": sigmas},
-                "2": {"groups": [1,2], "sigmas": sigmas},
-                "3": {"groups": [1,2,3], "sigmas": sigmas},
-                "4": {"groups": [1,2,3,4], "sigmas": sigmas},
-          },
-    5: {   
-                "0": {"groups": [1], "sigmas": sigmas},
-                "1": {"groups": [1], "sigmas": sigmas},
-                "2": {"groups": [1,2], "sigmas": sigmas},
-                "3": {"groups": [1,2,3], "sigmas": sigmas},
-                "4": {"groups": [1,2,3,4], "sigmas": sigmas},
-                "5": {"groups": [1,2,3,4,5], "sigmas": sigmas},
-          },
+    0: { "orders": [0], "sigmas": sigmas,},
+    1: { "orders": [0,1], "sigmas": sigmas,},
+    2: { "orders": [0,1,2], "sigmas": sigmas,},
+    3: { "orders": [0,1,2,3], "sigmas": sigmas,},
+    4: { "orders": [0,1,2,3,4], "sigmas": sigmas,},
+    5: { "orders": [0,1,2,3,4,5], "sigmas": sigmas,},
+    6: { "orders": [0,1,2,3,4,5,6], "sigmas": sigmas,},
+    7: { "orders": [0,1,2,3,4,5,6,7], "sigmas": sigmas,},
+    8: { "orders": [0,1,2,3,4,5,6,7,8], "sigmas": sigmas,},
+    9: { "orders": [0,1,2,3,4,5,6,7,8,9], "sigmas": sigmas,},
 }
-
+​
 MCSHs = MCSHs_dict[MCSHs_index]
-
-
-MCSHs = {   "MCSHs": MCSHs,
+​
+​
+GMP = {   "MCSHs": MCSHs,
             "atom_gaussians": {
-                        "H": "../../valence_gaussians/H_pseudodensity_2.g",
-                        "C": "../../valence_gaussians/C_pseudodensity_4.g",
-                        "O": "../../valence_gaussians/O_pseudodensity_4.g",
-                        "N": "../../valence_gaussians/N_pseudodensity_4.g",
-                        "F": "../../valence_gaussians/F_pseudodensity_4.g",
+                        "H": "../../psp_pseudo_v3/H_pseudodensity.g",
+                        "C": "../../psp_pseudo_v3/C_pseudodensity.g",
+                        "O": "../../psp_pseudo_v3/O_pseudodensity.g",
+                        "N": "../../psp_pseudo_v3/N_pseudodensity.g",
+                        "F": "../../psp_pseudo_v3/F_pseudodensity.g",
                   },
-            "cutoff": cutoff_distance
+            # "cutoff": 10.0,
+            "square":False,
+            "solid_harmonics": True,
 }
-
-
-
-# elements = ["Cu", "C", "O"]
+​
+​
 elements = ["H","C","N","O","F"]
+NN_dict = {
+    1: [32,32,32],
+    2: [64,64,64],
+    3: [128,64,64],
+    4: [256,128,64],
+    5: [512,256,128,64],
+    6: [1024,512,128,64],
+}
+hidden_layers = NN_dict[NN_index]
+​
+​
 config = {
     "model": {"name":"singlenn",
                   "get_forces": False, 
-                  "num_layers": num_layers, 
-                  "num_nodes": num_nodes, 
-                  #"elementwise":False,
-                  #"activation":torch.nn.ReLU,
-                  "batchnorm": True,
-                  "dropout":False,
-                  "dropout_rate": 0.2},
+                  "hidden_layers": hidden_layers, 
+                  "elementwise":False,
+                  "activation":torch.nn.GELU,
+                  "batchnorm": True},
     "optim": {
-            "gpus":1,
-            #"force_coefficient": 0.04,
+            "gpus":num_gpu,
             "force_coefficient": 0.0,
-            #"optimizer": torch.optim.SGD,
-            "lr": 1e-2,
-            "batch_size": batch_size,
-            "epochs": 12000,
+            "lr": 5e-3,
+            "batch_size": 128,
+            "epochs": 4000,
             "loss": "mae",
-            "scheduler": {"policy": "StepLR", "params": {"step_size": 2000, "gamma": 0.5}}
+            "scheduler": {"policy": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}}
     },
     "dataset": {
             "raw_data": train_images,
             "val_split": 0.1,
             "elements": elements,
-            "fp_scheme": "mcsh",
-            "fp_params": MCSHs,
-            "save_fps": False,
-            "scaling": {"type": "normalize", "range": (-1, 1),"elementwise":False}
+            "fp_scheme": "gmpordernorm",
+            "fp_params": GMP,
+            "save_fps": True,
+            "scaling": {"type": "normalize", "range": (-1, 1),"elementwise":False,"threshold": 1e-8}
         },
     "cmd": {
         "debug": False,
         "run_dir": "./",
         "seed": 1,
-        "identifier": "test",
+        "identifier": "data{}-GELU_ordernorm_sigma{}lin_MCSH{}_NN{}".format(dataset_name, nsigmas, MCSHs_index,NN_index),
         "verbose": True,
         "logger": False,
+        "dtype": torch.DoubleTensor
     },
 }
-
-
-
+​
+​
+​
 trainer = AtomsTrainer(config)
-#trainer.load_pretrained(checkpoint_name)
 print("training")
+os.chdir(cwd)
+tr_start = time.time()
 trainer.train()
+training_time = time.time() - tr_start
+​
 print("end training")
-
-train_mae = predict_data(trainer, train_images, image_type = "train")
-test_mae = predict_data(trainer, test_images, image_type = "test")
-
-message = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                    sigmas_index, 
+​
+pr_start = time.time()
+train_mae = predict_data(trainer, train_images, folder_name, image_type = "train")
+test_mae = predict_data(trainer, test_images, folder_name, image_type = "test")
+predict_time = time.time() - pr_start
+​
+os.chdir(folder_name)
+message = "ordernorm sqrt 1e-8scale\t{}linwide\t{}\t{}\tGELU\t{}\t{}\ttraining:{}\tpred:{}\n".format(
+                    nsigmas, 
                     MCSHs_index, 
-                    num_nodes,
-                    num_layers,
-                    batch_size,
-                    cutoff_distance,
+                    hidden_layers,
                     train_mae,
-                    test_mae
+                    test_mae,
+                    training_time,
+                    predict_time
                     )
-log("../train_result.dat",message)
-
+log("../pseudo_train_result.dat",message)
+os.chdir(cwd)

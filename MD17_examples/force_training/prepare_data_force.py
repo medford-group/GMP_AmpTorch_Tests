@@ -5,6 +5,7 @@ from ase import Atoms, Atom
 from ase.calculators.singlepoint import SinglePointCalculator
 import random
 import pickle
+import sys
 
 
 def load_images(filename = "aspirin.xyz", num_atoms = 21, element_list = ["C","H","O"], energy_offset = 0.0):
@@ -58,8 +59,8 @@ def get_dataset(images, system_name, num_train = 10000, num_test=10000, trial = 
     train_list = [images[i] for i in train_index_list]
     test_list = [images[i] for i in test_index_list]
     
-    train_filename = "data/{}_train_data_{}.p".format(system_name, trial)
-    test_filename = "data/{}_test_data_{}.p".format(system_name, trial)
+    train_filename = "./{}_trial_{}/train_data.p".format(system_name, trial)
+    test_filename = "./{}_trial_{}/test_data.p".format(system_name, trial)
     
     pickle.dump( train_list, open( train_filename, "wb" ) )
     pickle.dump( test_list, open( test_filename, "wb" ) )
@@ -67,4 +68,6 @@ def get_dataset(images, system_name, num_train = 10000, num_test=10000, trial = 
 
 images = load_images(filename = "aspirin.xyz", num_atoms = 21, element_list = ["C","H","O"])
 
-get_dataset(images, "aspirin", num_train = 1000, num_test=1000, trial = "f1")
+trial_name = sys.argv[1]
+
+get_dataset(images, "aspirin", num_train = 1000, num_test=1000, trial = trial_name)

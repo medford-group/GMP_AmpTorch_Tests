@@ -6,24 +6,24 @@ import numpy as np
 from ase import Atoms, Atom
 from ase.calculators.emt import EMT
 from ase.calculators.singlepoint import SinglePointCalculator
-from amptorch.trainer import AtomsTrainer
+#from amptorch.trainer import AtomsTrainer
 import pickle
 import random
 import math
 import sys
-import torch
+#import torch
 import os
-from sklearn.linear_model import LinearRegression
-
-
+#from sklearn.linear_model import LinearRegression
+​
+​
 def log(log_filename, message):
     f = open(log_filename, "a")
     f.write(message)
     f.close()
     return
-
+​
 def load_linear_fit_result(linear_fit_result_filename):
-
+​
     correction_dict = {}
     with open(linear_fit_result_filename) as fp: 
         Lines = fp.readlines() 
@@ -33,102 +33,77 @@ def load_linear_fit_result(linear_fit_result_filename):
             correction_dict[temp[0]]=float(temp[1])
 #     print(correction_dict)        
     return correction_dict
-
-
-
-def linear_correct(training_list, correction_dict, image_index, dataset):
-    # atom_dict = {atom:i for i, atom in enumerate(atom_list)}
-    # atom_dict_rev = {i:atom for i, atom in enumerate(atom_list)}
-
-    # atom_count_list = []
-    
-
+​
+​
+​
+def read_correction_file(filename):
+    result = []
+    with open(filename) as fp:
+        Lines = fp.readlines()
+        for line in Lines:
+            temp = line.strip().split(',')
+            result.append(float(temp[-1]))
+    return result
+​
+​
+def apply_system_correction(training_list, correction_dict, correction_list, image_index):
     training_atom_count_list = []
     print("start counting atoms")
-
-
+​
+​
     for i,system in enumerate(training_list):
         temp_atoms = system.get_chemical_symbols()
         temp_atom_count_dict = {}
         for atom in temp_atoms:
             temp_atom_count_dict[atom] = temp_atom_count_dict.get(atom, 0) + 1
-
+​
         training_atom_count_list.append(temp_atom_count_dict)
-
-
-    result2 = ""    
-    
-    corrected_energy_list = []
-    atoms_count_list = []
+​
+​
     for i, system in enumerate(training_list):
+        system.center()
+​
         energy = system.get_calculator().get_potential_energy()
-        num_atoms = 0
+        energy = energy - correction_list[i]
         for atom in training_atom_count_list[i].keys():
             energy -= training_atom_count_list[i][atom] * correction_dict[atom]
-            num_atoms += training_atom_count_list[i][atom]
-        corrected_energy_list.append(energy)
+​
+        system.set_pbc([True, True, True])
         calc = SinglePointCalculator(system,energy = energy, forces = system.get_calculator().get_forces())
         system.set_calculator(calc)
-        atoms_count_list.append(num_atoms)
-
-    corrected_energy_list = np.array(corrected_energy_list)
-    atoms_count_list = np.array(atoms_count_list)
-    corrected_energy_per_atom_list = np.divide(corrected_energy_list, atoms_count_list)
-
-    result2 += "training me: {}\n".format(np.mean(corrected_energy_list))
-    result2 += "training mae: {}\n".format(np.mean(np.abs(corrected_energy_list)))
-    result2 += "training mse: {}\n".format(np.mean(np.square(corrected_energy_list)))
-
-    result2 += "training mepa: {}\n".format(np.mean(corrected_energy_per_atom_list))
-    result2 += "training maepa: {}\n".format(np.mean(np.abs(corrected_energy_per_atom_list)))
-    result2 += "training msepa: {}\n".format(np.mean(np.square(corrected_energy_per_atom_list)))
-
-
-    linear_model_info_filename = "{}_images/linear_model_info_{}.dat".format(dataset, image_index)
-    log(linear_model_info_filename,result2)
-    
     return training_list
-
-
-def load_training_data(dataset, correction_dict):
-
-
-
+​
+​
+def load_training_data(dataset,correction_dict,index):
+​
     #atom_list = []
     #training_data_list = []
-    for i in range(200):
+    result = []
+    for i in range(index * 10, (index+1) * 10):
         print("================= start image {} =====================".format(i))
         filename = "../{}/{}/{}.extxyz".format(dataset,dataset,i)
+        filename2 = "../{}/{}/{}.txt".format(dataset,dataset,i)
         training_data_list = read(filename, index=':')
+        correction_list = read_correction_file(filename2)
+​
         print(len(training_data_list))
-        atom_list = []
-
-        energy_list_pre = []
-        for image in training_data_list:
-            image.center()
-            atom_list += image.get_chemical_symbols()
-            energy_list_pre.append(image.get_calculator().get_potential_energy())
-
-        atom_list = list(set(atom_list))
-        print("number of atoms: {}".format(len(atom_list)))
-
-        print("average energy before: ")
-        print(np.mean(energy_list_pre))
-
-        training_images = linear_correct(training_data_list, correction_dict, i, dataset)
+​
+        training_images = apply_system_correction(training_data_list, correction_dict, correction_list, i)
+        result += training_images
         energy_list_after = [image.get_calculator().get_potential_energy() for image in training_images]
         print("average energy after: ")
         print(np.mean(energy_list_after))
-
-        training_filename = "{}_images/{}.p".format(dataset,i)
-        pickle.dump( training_images, open( training_filename, "wb" ) )
-
+​
+    training_filename = "images/images_{}_{}.p".format(dataset,index)
+    pickle.dump( result , open( training_filename, "wb" ) )
+​
     return 
-
-torch.set_num_threads(1)
-trail_num = "data_full_20M"
-dataset = sys.argv[1]
+​
+trail_num = "data_full_20M_linear_correct"
+dataset = "s2ef_train_20M"
 folder_name = "trial_{}".format(trail_num)
 os.chdir(folder_name)
 correction_dict = load_linear_fit_result("linear_model_result.dat")
-load_training_data(dataset, correction_dict)
+for index in range(20):
+    print("**** start index {} ****".format(index))
+    load_training_data(dataset,correction_dict,index)
